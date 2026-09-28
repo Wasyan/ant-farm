@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Муравьиная ферма: Мозаика | Ant Farm Puzzle</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐜</text></svg>">
+</head>
+<body>
+    <div class="game-container">
+        <!-- Header -->
+        <header class="game-header">
+            <div class="brand">
+                <span class="brand-icon">🐜</span>
+                <div class="brand-text">
+                    <h1>Муравьиная ферма</h1>
+                    <span>Цветная логическая мозаика</span>
+                </div>
+            </div>
+
+            <div class="header-controls">
+                <button id="btnSpeed" class="btn btn-default" title="Скорость игры">▶ 1.0x</button>
+                <button id="btnSound" class="btn btn-default" title="Включить / Выключить звук">🔊 Звук: Вкл</button>
+                <button id="btnUndo" class="btn btn-default" title="Отменить последний ход">↩️ Отмена</button>
+                <button id="btnRestart" class="btn btn-default" title="Перезапустить уровень">🔄 Заново</button>
+                <button id="btnLevels" class="btn btn-default" title="Выбрать уровень">🗺️ Уровни</button>
+                <button id="btnCustom" class="btn btn-success" title="Создать свой рисунок">🎨 Редактор</button>
+            </div>
+        </header>
+
+        <!-- Level Info & Stats Bar -->
+        <section class="game-info-bar">
+            <div class="level-meta">
+                <h2 id="levelTitle">Уровень 1</h2>
+                <p id="levelSubtitle">Загрузка уровня...</p>
+            </div>
+
+            <div class="stats-badges">
+                <div class="stat-pill" title="Осталось кубиков в узоре">
+                    <span>Кубики:</span>
+                    <strong id="cubesCount">0</strong> 🧊
+                </div>
+                <div class="stat-pill" title="Занятые слоты коробок">
+                    <span>Слоты:</span>
+                    <strong id="slotsCount">0/5</strong> 📦
+                </div>
+                <div class="stat-pill warning" title="Ошибочные открытия коробок без доступа к кубикам">
+                    <span>Плохие ходы:</span>
+                    <strong id="badMovesCount">0</strong> ⚠️
+                </div>
+            </div>
+        </section>
+
+        <!-- Canvas Playground -->
+        <main class="canvas-wrapper">
+            <canvas id="gameCanvas" width="900" height="700"></canvas>
+        </main>
+
+        <!-- Guide Card -->
+        <footer class="guide-card">
+            <div class="guide-icon">💡</div>
+            <div class="guide-content">
+                <h3>Как играть:</h3>
+                <ul>
+                    <li><strong>Узор сверху:</strong> Муравьи могут утащить только кубики, открытые снизу (нет преград в столбце).</li>
+                    <li><strong>Коробки снизу:</strong> Нажмите на коробку, чтобы открыть её в свободном слоте. Число на ней — количество муравьев 🐜.</li>
+                    <li><strong>Плохой ход:</strong> Открыть коробку, цвета которой сейчас нет в доступе. Коробка займет слот, пока кубики не откроются!</li>
+                    <li><strong>Победа:</strong> Освобождайте путь к верхним рядам и разберите всю картинку без остатка!</li>
+                </ul>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modal: Victory -->
+    <div id="victoryModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-icon">🏆</div>
+            <h2 class="modal-title">Победа!</h2>
+            <div id="victoryStars" class="modal-stars">⭐⭐⭐</div>
+            <p id="victoryMsg" class="modal-body">Мозаика полностью разобрана!</p>
+            <div class="modal-actions">
+                <button id="modalRestart" class="btn btn-secondary">Пройти ещё раз 🔄</button>
+                <button id="modalNextLevel" class="btn btn-primary">Следующий уровень ➡️</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Defeat / Deadlock -->
+    <div id="defeatModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-icon">🛑</div>
+            <h2 class="modal-title">Тупик!</h2>
+            <p id="defeatMsg" class="modal-body">Все слоты забиты коробками, у которых нет доступа к кубикам.</p>
+            <div class="modal-actions">
+                <button id="modalDefeatRestart" class="btn btn-secondary">Начать заново 🔄</button>
+                <button id="modalUndo" class="btn btn-primary">Отменить ход ↩️</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Level Selection -->
+    <div id="levelsModal" class="modal-overlay">
+        <div class="modal-card wide">
+            <div class="modal-icon">🗺️</div>
+            <h2 class="modal-title">Выбор уровня</h2>
+            <p class="modal-body">Выберите любой уровень мозаики для прохождения:</p>
+            <div id="levelsList" class="levels-grid"></div>
+            <div class="modal-actions">
+                <button id="modalCloseLevels" class="btn btn-secondary">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Custom Level Editor -->
+    <div id="customModal" class="modal-overlay">
+        <div class="modal-card wide">
+            <div class="modal-icon">🎨</div>
+            <h2 class="modal-title">Свой узор</h2>
+            <p class="modal-body">Выберите цвет и нарисуйте мозаику в сетке 5×6. Коробки с муравьями сгенерируются сами!</p>
+            
+            <div class="custom-editor-wrapper">
+                <div id="customPalette" class="palette-bar"></div>
+                <div class="custom-grid-container">
+                    <div id="customGridEditor"></div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button id="modalCloseCustom" class="btn btn-secondary">Отмена</button>
+                <button id="btnPlayCustom" class="btn btn-success">Запустить уровень 🚀</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Scripts -->
+    <script src="levels.js"></script>
+    <script src="sound.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
